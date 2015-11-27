@@ -1,0 +1,34 @@
+{
+	"name": "fspr",
+	"version": "0.1",
+	"description": "A promise wrapper to essential fs.* interface with a couple of extensions.",
+	"main": "fspr.js",
+	"scripts": {
+		"test": "echo 'tests missing'"
+	},
+	"engines": {
+		"node": ">=0.12.0"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/rinne/node-fspr.git"
+	},
+	"keywords": [
+		"fs",
+		"filesystem",
+		"readfile",
+		"writefile",
+		"file-io",
+		"promise"
+	],
+	"author": {
+		"name": "Timo J. Rinne",
+		"email": "tri@iki.fi",
+		"url": "https://github.com/rinne/"
+	},
+	"license": "GPL-2.0",
+	"bugs": {
+		"url": "https://github.com/rinne/node-fspr/issues"
+	},
+	"homepage": "https://github.com/rinne/node-fspr#readme"
+}
