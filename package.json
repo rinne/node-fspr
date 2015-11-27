@@ -1,6 +1,6 @@
 {
 	"name": "fspr",
-	"version": "1.0-alpha",
+	"version": "0.0.1",
 	"description": "A promise wrapper to essential fs.* interface with a couple of extensions.",
 	"main": "fspr.js",
 	"scripts": {
