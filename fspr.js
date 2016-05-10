@@ -87,7 +87,7 @@ function fsprReadFile(path, options) {
 		encoding: (((typeof(options) === 'object') &&
 					(options.encoding !== undefined) &&
 					(options.encoding !== 'buffer')) ?
-				   options.maxSize :
+				   options.encoding :
 				   undefined),
 		outputStream: (((typeof(options) === 'object') &&
 						(options.outputStream !== undefined)) ?
@@ -311,7 +311,7 @@ function fsprWriteFile(path, input, options) {
 		encoding: (((typeof(options) === 'object') &&
 					(options.encoding !== undefined) &&
 					(options.encoding !== 'buffer')) ?
-				   options.maxSize :
+				   options.encoding :
 				   'utf8'),
 		exclusive: (((typeof(options) === 'object') &&
 					 (options.exclusive !== undefined)) ?
@@ -558,6 +558,121 @@ function fsprWriteFile(path, input, options) {
 	return rv;
 }
 
+function fsprExistingPath(path) {
+	return (fsprLStat(path)
+			.then(function() {
+				return true;
+			})
+			.catch(function(e) {
+				throw e;
+			}));
+}
+
+function fsprNonExistingPath(path) {
+	return (fsprLStat(path)
+			.then(function() {
+				var e = new Error('Existing destination file');
+				e.name = 'EEXIST';
+				e.code = 'EEXIST';
+				throw e;
+			})
+			.catch(function(e) {
+				if (e && (typeof(e) === 'object') && (e.code === 'ENOENT')) {
+					return true;
+				}
+				throw e;
+			}));
+}
+
+
+
+function fsprMove(src, dst, overwrite) {
+	overwrite = overwrite ? true : false;
+	return ((overwrite
+			 ?
+			 (fsprLStat(dst)
+			  .then(function(res) {
+				  if (res.isSymbolicLink(res)) {
+					  var e = new Error('Unable to overwrite symbolic link');
+					  e.name = 'EEXIST';
+					  e.code = 'EEXIST';
+					  throw e;
+				  } else if (res.isDirectory(res)) {
+					  var e = new Error('Unable to overwrite directory');
+					  e.name = 'EISDIR';
+					  e.code = 'EISDIR';
+					  throw e;
+				  }
+				  return true;
+			  })
+			  .catch(function(e) {
+				  if (e && (typeof(e) === 'object') && (e.code === 'ENOENT')) {
+					  return true;
+				  }
+				  throw e;
+			  }))
+			 :
+			 fsprNonExistingPath(dst))
+			.then(function() {
+				return (fsprRename(src, dst)
+						.then(function() {
+							return true;
+						})
+						.catch(function(e) {
+							if (e && (typeof(e) === 'object') && (e.code === 'EXDEV')) {
+								return false;
+							}
+							throw e;
+						}));
+			})
+			.then(function(res) {
+				var size;
+				if (res) {
+					return true;
+				}
+				return (fsprLStat(src)
+						.then(function(res) {
+							if (! res.isFile()) {
+								var e = new Error('Cross-device source not a regular file');
+								e.name = 'EISDIR';
+								e.code = 'EISDIR';
+								throw e;
+							}
+							return (fsprWriteFile(dst,
+												  fs.createReadStream(src),
+												  { size: res.size,
+													exclusive: (! overwrite),
+													unlinkOnError: true })
+									.then(function() {
+										return (fsprUnLink(src)
+												.then(function() {
+													return true;
+												})
+												.catch(function(e) {
+													return (fsprUnLink(dst)
+															.then(function() {
+																throw e;
+															})
+															.catch(function(e2) {
+																throw e;
+															}));
+												}));
+												
+									})
+									.catch(function (e) {
+										throw e;
+									}));
+						})
+						.catch(function(e) {
+							throw e;
+						}));
+			})
+			.catch(function(e) {
+				console.log(e);
+				throw e;
+			}));
+}
+
 module.exports = {
 	open: fsprOpen,
 	close: fsprClose,
@@ -579,5 +694,8 @@ module.exports = {
 	read: fsprRead,
 	write: fsprWrite,
 	readfile: fsprReadFile,
-	writefile: fsprWriteFile
+	writefile: fsprWriteFile,
+	move: fsprMove,
+	nonexistingpath: fsprNonExistingPath,
+	existingpath: fsprExistingPath
 };
